@@ -111,6 +111,11 @@ int main(int argc, char** argv)
 		cout << input_dir << " does not exist" << endl;
 		return -1;
 	}
+	boost::filesystem::path result_path(output_dir);
+	
+	if (!boost::filesystem::exists(result_path))
+		boost::filesystem::create_directory(result_path);
+
 	boost::filesystem::recursive_directory_iterator begin_iter(laser_path);
 	boost::filesystem::recursive_directory_iterator end_iter;
 	std::vector<std::string> file_path;
