@@ -176,7 +176,7 @@ void CommandArgs::param(const std::string& name, std::vector<double>& p, const s
 bool CommandArgs::parseArgs(int argc, char** argv, bool exitOnError)
 {
 	_progName = argv[0];
-	int i;
+	int i = 1;
 	for (int i = 1; i < argc; ++i) {
 		string name = argv[i];
 
@@ -217,14 +217,15 @@ bool CommandArgs::parseArgs(int argc, char** argv, bool exitOnError)
 					break;
 				}
 			}
-			if (it == _args.end()) { //Ã»ÓÐÔÚÔ¤´æµÄ²ÎÊýÖµ¶ÔÀï£¬ÕÒµ½ºÍÊäÈë¶ÔÓ¦µÄ²ÎÊýÏî
+			if (it == _args.end()) { //Ã»ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½Ä²ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï£¬ï¿½Òµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½
 				cerr << "Error: Unknown Option ' " << name << " ' (use -help to get list of options).\n";
 				if (exitOnError) exit(1);
 				return false;
 			}
 		}
 	}
-	if ((int)_leftOvers.size() > argc - i) { //Èç¹ûÔÚÔ¤´æµÄ²ÎÊýÖµ¶ÔÀï´æÔÚleftOver£¬ÔòÕâÊÇÓÃÓÚ±ØÐëÒªÊäÈëµÄ²ÎÊý
+
+	if ((int)_leftOvers.size() > argc - i) { //ï¿½ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½Ä²ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½leftOverï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½
 		cerr << "Error: program requires parameters" << endl;
 		printHelp(cerr);
 		if (exitOnError) exit(1);

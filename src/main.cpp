@@ -21,7 +21,7 @@ typedef pcl::PointCloud<PointT> PointCloud;
 #if defined(_WIN32) || defined(WIN32)
 	#define blash "//"
 #else
-	#define blash "\"
+	#define blash "/"
 #endif
 
 int loadPoints(const string FILE_NAME, PointCloud::Ptr& cloud)
@@ -87,6 +87,7 @@ int main(int argc, char** argv)
 	string CONFIG;
 	arg.param("config", CONFIG, "", "files within which directory will be processed");
 	arg.parseArgs(argc, argv);
+	
 	if (CONFIG.empty()) {
 		std::cout << "Usage: LiDARChessBoard --config <path for dataset>";
 		return -1;
@@ -132,7 +133,6 @@ int main(int argc, char** argv)
 			std::string name = strPath.substr(blashPosition + 1, dotPosition - blashPosition - 1);
 			file_path.push_back(strPath);
 			file_name.push_back(name);
-			//cout << name << endl;
 		}
 	}
 #pragma endregion
@@ -252,8 +252,8 @@ int main(int argc, char** argv)
 
 		std::string outTxt = output_dir + file_name[i] + ".txt";
 		std::string outPly = output_dir + file_name[i] + ".ply";
-		std::fstream outTxtHandle(outTxt, ios::out);
-		std::fstream outPlyHandle(outPly, ios::out);
+		std::fstream outTxtHandle(outTxt, std::fstream::out);
+		std::fstream outPlyHandle(outPly, std::fstream::out);
 		PointCloud::Ptr combined(new PointCloud());
 
 		outPlyHandle << "ply"

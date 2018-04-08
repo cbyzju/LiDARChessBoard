@@ -1,5 +1,5 @@
 %YAML:1.0
 
 #input output dir
-input_dir: "E:/windows/work/vs2015/LiDARChessBoard/dataset/laser/"
-output_dir: "E:/windows/work/vs2015/LiDARChessBoard/result/"
+input_dir: "/home/cby/Desktop/LiDARChessBoard/dataset/laser/"
+output_dir: "/home/cby/Desktop/LiDARChessBoard/result/"
