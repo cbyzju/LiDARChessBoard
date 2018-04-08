@@ -16,5 +16,5 @@ link_directories(${OpenCV_LIBRARY_DIRS})
 
 include_directories(${EIGEN_INCLUDE_DIRS})
 
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} main.cpp command_args.cpp)
 target_link_libraries(${PROJECT_NAME} ${PCL_LIBRARIES} ${BOOST_LIBRARIES} ${OpenCV_LIBRARIES})
