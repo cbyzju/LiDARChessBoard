@@ -79,8 +79,14 @@ int loadPoints(const string FILE_NAME, PointCloud::Ptr& cloud)
 }
 
 //transfer 3D points to PointCloud, whose format is pcd / ply
-int main()
+int main(int argc, char** argv)
 {
+	//if (argc < 2)
+	//{
+	//	cout << "usage: " << endl;
+	//	return -1;
+	//}
+
 	string CONFIG = "E:/windows/work/vs2015/LiDARChessBoard/config.yaml";
 	cv::FileStorage fs(CONFIG, cv::FileStorage::READ);
 	if (!fs.isOpened())
@@ -94,7 +100,6 @@ int main()
 	std::cout <<"output dir: "<<output_dir << endl;
 
 	boost::filesystem::path laser_path(input_dir);
-
 	if (!boost::filesystem::exists(laser_path))
 	{
 		cout << input_dir << " does not exist" << endl;
@@ -103,14 +108,20 @@ int main()
 	boost::filesystem::recursive_directory_iterator begin_iter(laser_path);
 	boost::filesystem::recursive_directory_iterator end_iter;
 	std::vector<std::string> file_path;
+	std::vector<std::string> file_name;
 	for ( ; begin_iter != end_iter; ++begin_iter)
 	{
 		if (boost::filesystem::is_directory(*begin_iter))
 			continue;
 		else
 		{
-			std::string strPath = begin_iter->path().string();
+			std::string strPath = begin_iter->path().string();		
+			int blashPosition = strPath.find_last_of("\\"); //windows
+			int dotPosition = strPath.find_last_of(".");
+			std::string name = strPath.substr(blashPosition + 1, dotPosition - blashPosition - 1);
 			file_path.push_back(strPath);
+			file_name.push_back(name);
+			cout << name << endl;
 		}
 	}
 
@@ -119,59 +130,18 @@ int main()
 		cout << file_path[i] << endl;
 	}
 
-	bool downSampling = false;
-	bool normalization = false;
-
 #pragma region load points
 	string FILE_NAME = "E:/windows/work/vs2015/LiDARChessBoard/dataset/laser/002.txt";
 	string NAME = FILE_NAME.substr(0, FILE_NAME.size() - 4);
 	PointCloud::Ptr cloud(new PointCloud());
 	if (loadPoints(FILE_NAME, cloud) < 0) 
 	{ 
-		std::cerr << "error! no such direcctory: " << FILE_NAME << std::endl;  
+		std::cerr << "error! no such directory: " << FILE_NAME << std::endl;  
 		return -1; 
 	}
 #pragma endregion
 
-#pragma region normalization
-	if (normalization)
-	{
-		Eigen::Matrix<double, 3, 1> centroid;
-		centroid.setZero();
-		int cp = cloud->points.size();
-		for (int i = 0; i < cp; ++i)
-		{
-			centroid[0] += cloud->points[i].x;
-			centroid[1] += cloud->points[i].y;
-			centroid[2] += cloud->points[i].z;
-		}
-		centroid /= cp;
-		for (int i = 0; i < cp; ++i)
-		{
-			cloud->points[i].x -= centroid[0];
-			cloud->points[i].y -= centroid[1];
-			cloud->points[i].z -= centroid[2];
-		}
-	}
-#pragma endregion
-
-#pragma region sampling
-
-	if (downSampling)
-	{
-		//create the filtering object
-		std::cout << "Number of points before downSampling: " << cloud->points.size() << std::endl;
-		pcl::VoxelGrid<PointT> sampling;
-		sampling.setLeafSize(10, 10, 10);
-		sampling.setInputCloud(cloud);
-		sampling.filter(*cloud);
-		std::cout << "Number of points after downSampling: " << cloud->points.size() << std::endl;
-	}
-	cout << "cloud size: " << cloud->points.size() << " points." << endl;
-	//pcl::io::savePCDFile(NAME + ".pcd", *cloud);
-	//pcl::io::savePLYFile(NAME + ".ply", *cloud);
-#pragma endregion
-
+#pragma region projection
 	PointCloud::Ptr roi(new PointCloud());
 	int resolution = 50;
 	int row = 3 * resolution + 1;
@@ -190,6 +160,8 @@ int main()
 			roi->points.push_back(cloud->points[i]);
 		}
 	}
+#pragma endregion
+
 	
 	cv::Mat colorProjection;
 	cv::cvtColor(projection, colorProjection, CV_GRAY2BGR);
@@ -212,6 +184,13 @@ int main()
 
 	cv::Mat boundingBox(projection.size(), CV_8UC1, cv::Scalar(0));
 	cv::Rect rect = boundingRect(requiredContour);
+	cout << rect << endl;
+	rect.height += 0.40 *  resolution;
+	rect.y -= 0.20 *  resolution;
+	rect.width += 0.20 *  resolution;
+	rect.x -= 0.10 *  resolution;
+
+	cout << rect << endl;
 	cv::rectangle(boundingBox, rect, cv::Scalar(255), CV_FILLED);
 	imshow("boundingBox", boundingBox);
 	cv::waitKey(1);
@@ -220,7 +199,6 @@ int main()
 	cv::drawContours(chessProjection, contours, requiredIndex, cv::Scalar(255), CV_FILLED);
 	imshow("chessProjection", chessProjection);
 	cv::waitKey(1);
-
 
 	cv::drawContours(colorProjection, contours, requiredIndex, cv::Scalar(0, 0, 255), 1);
 	cv::rectangle(colorProjection, rect, cv::Scalar(0, 255, 0), 1);
@@ -234,7 +212,6 @@ int main()
 		int indy = static_cast<int>((roi->points[i].y + 2) * resolution);
 		if (chessProjection.at<uchar>(indx, indy))
 			roughPlane->points.push_back(roi->points[i]);
-
 	}
 
 #pragma region planeSegmentation
@@ -281,13 +258,46 @@ int main()
 		int indx = static_cast<int>((roi->points[i].x - 0.5) * resolution);
 		int indy = static_cast<int>((roi->points[i].y + 2) * resolution);
 
-		if (a*x + b*y + c*z + d < 0.1 && boundingBox.at<uchar>(indx, indy) > 0)
+		if (a*x + b*y + c*z + d < 0.15 && boundingBox.at<uchar>(indx, indy) > 0)
 			plane->points.push_back(roi->points[i]);
 	}
+	cout << "inliers in chessboard: " << plane->points.size() << endl;
 #pragma endregion
 
-	//pcl::io::savePLYFile("E:/windows/work/vs2015/TransferDepthMapToPointCloud/dataset/ply/cloud" + std::to_string(i) + ".ply", *cloud);
+#pragma region save data
+	
+	std::string outTxt = output_dir + file_name[0] + ".txt";
+	std::string outPly = output_dir + file_name[0] + ".ply";
+	std::fstream outTxtHandle(outTxt, ios::out);
+	std::fstream outPlyHandle(outPly, ios::out);
+	PointCloud::Ptr combined(new PointCloud());
+	
+	outPlyHandle << "ply"
+		<< '\n' << "format ascii 1.0"
+		<< '\n' << "element vertex " << cloud->points.size() + plane->points.size()
+		<< '\n' << "property float x"
+		<< '\n' << "property float y"
+		<< '\n' << "property float z"
+		<< '\n' << "property uchar red"
+		<< '\n' << "property uchar green"
+		<< '\n' << "property uchar blue"
+		<< '\n' << "end_header" << std::endl;
+	for (int i = 0; i < plane->points.size(); ++i)
+	{
+		outPlyHandle << plane->points[i].x << ' ' << plane->points[i].y << ' ' << plane->points[i].z << " 255 0 255\n";
+		outTxtHandle << plane->points[i].x << " " << plane->points[i].y << " " << plane->points[i].z << "\n";
+	}
+	for (int i = 0; i < cloud->points.size(); ++i)
+	{
+		outPlyHandle << cloud->points[i].x << ' ' << cloud->points[i].y << ' ' << cloud->points[i].z << " 0 255 255\n";
+	}
 
+	outPlyHandle.close();
+	outTxtHandle.close();
+	//pcl::io::savePLYFile(outPly, *combined);
+
+#pragma endregion
+	
 #pragma region visualization
 	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
 	int v1(0);
